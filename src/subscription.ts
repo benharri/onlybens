@@ -3,7 +3,6 @@ import {
   isCommit,
 } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
-import BaseResolver from '@atproto/did-resolver/dist/base-resolver'
 import { DidResolver, getHandle } from '@atproto/did-resolver'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
