@@ -3,7 +3,7 @@ import {
   isCommit,
 } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
-import { DidResolver, getHandle } from '@atproto/did-resolver'
+import { DidResolver } from '@atproto/did-resolver'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent) {
@@ -19,25 +19,20 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     // }
 
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
+
+    async function isBen(create) {
+      let did = await resolver.resolveDid(create.author)
+      let isBen = did?.alsoKnownAs?.some(aka => aka.toLowerCase().includes('ben'))
+      if (isBen) {
+        console.log(did?.alsoKnownAs, create.record.text)
+      }
+      return isBen
+    }
+
     const postsToCreate = ops.posts.creates
-      .filter((create) => {
-        let isBen = false
-        resolver.resolveDid(create.author).then(author => {
-            if (author) {
-              let handle = getHandle(author)
-              if (handle) {
-                isBen = handle.toLowerCase().includes('ben')
-                if (isBen) {
-                  console.log(handle, create.record.text)
-                }
-              }
-            }
-          },
-        )
-        return isBen
-      })
+      .filter(isBen)
       .map((create) => {
-        // map alf-related posts to a db row
+        // map ben posts to a db row
         return {
           uri: create.uri,
           cid: create.cid,
