@@ -18,41 +18,31 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     //   console.log(post.record.text)
     // }
 
-    const postsToDelete = ops.posts.deletes.map((del) => del.uri)
-
-    async function isBen(create) {
-      let did = await resolver.resolveDid(create.author)
+    for (const post of ops.posts.creates) {
+      let did = await resolver.resolveDid(post.author)
       let isBen = did?.alsoKnownAs?.some(aka => aka.toLowerCase().includes('ben'))
+
       if (isBen) {
-        console.log(did?.alsoKnownAs, create.record.text)
+        console.log(did?.alsoKnownAs, post.record.text)
+        await this.db
+          .insertInto('post')
+          .values({
+            uri: post.uri,
+            cid: post.cid,
+            replyParent: post.record?.reply?.parent.uri ?? null,
+            replyRoot: post.record?.reply?.root.uri ?? null,
+            indexedAt: new Date().toISOString(),
+          })
+          .onConflict(oc => oc.doNothing())
+          .execute()
       }
-      return isBen
     }
 
-    const postsToCreate = ops.posts.creates
-      .filter(isBen)
-      .map((create) => {
-        // map ben posts to a db row
-        return {
-          uri: create.uri,
-          cid: create.cid,
-          replyParent: create.record?.reply?.parent.uri ?? null,
-          replyRoot: create.record?.reply?.root.uri ?? null,
-          indexedAt: new Date().toISOString(),
-        }
-      })
-
+    const postsToDelete = ops.posts.deletes.map((del) => del.uri)
     if (postsToDelete.length > 0) {
       await this.db
         .deleteFrom('post')
         .where('uri', 'in', postsToDelete)
-        .execute()
-    }
-    if (postsToCreate.length > 0) {
-      await this.db
-        .insertInto('post')
-        .values(postsToCreate)
-        .onConflict((oc) => oc.doNothing())
         .execute()
     }
   }
