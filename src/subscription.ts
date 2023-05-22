@@ -21,22 +21,20 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
     const postsToCreate = ops.posts.creates
       .filter((create) => {
-        // only alf-related posts
-        //return create.record.text.toLowerCase().includes('alf')
+        let isBen = false
         resolver.resolveDid(create.author).then(author => {
             if (author) {
               let handle = getHandle(author)
               if (handle) {
-                let isBen = handle.toLowerCase().includes('ben')
+                isBen = handle.toLowerCase().includes('ben')
                 if (isBen) {
                   console.log(handle, create.record.text)
                 }
-                return isBen
               }
             }
           },
         )
-        return false
+        return isBen
       })
       .map((create) => {
         // map alf-related posts to a db row
