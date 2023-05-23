@@ -62,6 +62,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             replyRoot: post.record?.reply?.root.uri ?? null,
             indexedAt: new Date().toISOString(),
             text: post.record.text,
+            author: post.author,
           })
           .onConflict(oc => oc.doNothing())
           .execute()

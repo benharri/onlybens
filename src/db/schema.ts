@@ -13,6 +13,7 @@ export type Post = {
   replyRoot: string | null
   indexedAt: string
   text: string | null
+  author: string | null
 }
 
 export type Repost = {

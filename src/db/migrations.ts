@@ -83,3 +83,15 @@ migrations['005'] = {
     await db.schema.alterTable('post').dropColumn('text')
   },
 }
+
+migrations['005'] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable('post')
+      .addColumn('author', 'varchar')
+      .execute()
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema.alterTable('post').dropColumn('author')
+  },
+}
