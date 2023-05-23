@@ -84,7 +84,7 @@ migrations['005'] = {
   },
 }
 
-migrations['005'] = {
+migrations['006'] = {
   async up(db: Kysely<unknown>) {
     await db.schema
       .alterTable('post')
