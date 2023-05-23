@@ -12,6 +12,7 @@ import {
   isCommit,
 } from '../lexicon/types/com/atproto/sync/subscribeRepos'
 import { Database } from '../db'
+import { AtpAgent } from '@atproto/api'
 
 export abstract class FirehoseSubscriptionBase {
   public sub: Subscription<RepoEvent>
@@ -34,13 +35,13 @@ export abstract class FirehoseSubscriptionBase {
     })
   }
 
-  abstract handleEvent(evt: RepoEvent): Promise<void>
+  abstract handleEvent(evt: RepoEvent, agent: AtpAgent): Promise<void>
 
-  async run(subscriptionReconnectDelay: number) {
+  async run(agent: AtpAgent, subscriptionReconnectDelay: number) {
     try {
       for await (const evt of this.sub) {
         try {
-          await this.handleEvent(evt)
+          await this.handleEvent(evt, agent)
         } catch (err) {
           console.error('repo subscription could not handle message', err)
         }
@@ -51,7 +52,7 @@ export abstract class FirehoseSubscriptionBase {
       }
     } catch (err) {
       console.error('repo subscription errored', err)
-      setTimeout(() => this.run(subscriptionReconnectDelay), subscriptionReconnectDelay)
+      setTimeout(() => this.run(agent, subscriptionReconnectDelay), subscriptionReconnectDelay)
     }
   }
 

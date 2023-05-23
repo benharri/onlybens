@@ -8,7 +8,8 @@ export const shortname = 'onlybens'
 export const handler = async (ctx: AppContext, params: QueryParams) => {
   let builder = ctx.db
     .selectFrom('post')
-    .selectAll()
+    .select(['uri', 'cid', 'indexedAt'])
+    .unionAll(ctx.db.selectFrom('repost').select(['uri', 'cid', 'indexedAt']))
     .orderBy('indexedAt', 'desc')
     .orderBy('cid', 'desc')
     .limit(params.limit)

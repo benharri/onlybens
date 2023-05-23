@@ -2,6 +2,7 @@ import http from 'http'
 import events from 'events'
 import express from 'express'
 import { DidResolver, MemoryCache } from '@atproto/did-resolver'
+import { AtpAgent } from '@atproto/api'
 import { createServer } from './lexicon'
 import feedGeneration from './methods/feed-generation'
 import describeGenerator from './methods/describe-generator'
@@ -16,6 +17,7 @@ export class FeedGenerator {
   public db: Database
   public firehose: FirehoseSubscription
   public cfg: Config
+  public agent: AtpAgent
 
   constructor(
     app: express.Application,
@@ -63,7 +65,13 @@ export class FeedGenerator {
 
   async start(): Promise<http.Server> {
     await migrateToLatest(this.db)
-    this.firehose.run(this.cfg.subscriptionReconnectDelay)
+    this.agent = new AtpAgent({ service: 'https://bsky.social' })
+    await this.agent.login({
+      identifier: process.env.FEEDGEN_HANDLE!,
+      password: process.env.FEEDGEN_APP_PASSWORD!,
+    })
+    console.log('logged in')
+    await this.firehose.run(this.agent, this.cfg.subscriptionReconnectDelay)
     this.server = this.app.listen(this.cfg.port, this.cfg.listenhost)
     await events.once(this.server, 'listening')
     return this.server

@@ -3,27 +3,56 @@ import {
   isCommit,
 } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
-import { DidResolver } from '@atproto/did-resolver'
+import { AtpAgent } from '@atproto/api'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
-  async handleEvent(evt: RepoEvent) {
+  async handleEvent(evt: RepoEvent, agent: AtpAgent) {
     if (!isCommit(evt)) return
     const ops = await getOpsByType(evt)
-    const resolver = new DidResolver()
-
-    // This logs the text of every post off the firehose.
-    // Just for fun :)
-    // Delete before actually using
-    // for (const post of ops.posts.creates) {
-    //   console.log(post.record.text)
-    // }
+    const bens = await this.db.selectFrom('ben').select('did').execute()
 
     for (const post of ops.posts.creates) {
-      let did = await resolver.resolveDid(post.author)
-      let isBen = did?.alsoKnownAs?.some(aka => aka.toLowerCase().includes('ben'))
+      const user = await this.db
+        .selectFrom('user')
+        .select('did')
+        .where('did', '=', post.author)
+        .execute()
 
-      if (isBen) {
-        console.log(did?.alsoKnownAs, post.record.text)
+      if (user.length === 0) {
+        console.log(`fetching profile for ${post.author}`)
+        const profile = await agent.api.app.bsky.actor.getProfile({ actor: post.author })
+        await this.db
+          .insertInto('user')
+          .values({
+            did: post.author,
+            handle: profile.data.handle,
+            displayName: profile.data.handle,
+            bio: profile.data.description,
+            indexedAt: new Date().toISOString(),
+          })
+          .execute()
+      }
+
+      const profile = await this.db
+        .selectFrom('user')
+        .select(['displayName', 'handle'])
+        .where('did', '=', post.author)
+        .executeTakeFirst()
+
+      if (profile && (profile.displayName?.toLowerCase().includes('ben') || profile.handle.toLowerCase().includes('ben'))) {
+        const ben = await this.db
+          .selectFrom('ben')
+          .select('did')
+          .where('did', '=', post.author)
+          .execute()
+
+        if (ben.length === 0) {
+          await this.db.insertInto('ben').values({ did: post.author }).execute()
+          console.log('new ben collected!!')
+          console.log(`${post.author} is ${profile.handle} with display name ${profile.displayName}`)
+        }
+
+        console.log(profile.handle, post.record.text)
         await this.db
           .insertInto('post')
           .values({
@@ -36,6 +65,37 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .onConflict(oc => oc.doNothing())
           .execute()
       }
+    }
+
+    const repostsToDelete = ops.reposts.deletes.map((del) => del.uri)
+    const repostsToCreate = ops.reposts.creates
+      .filter((create) => {
+        // only ben posts
+        return bens.find((alice) => alice.did === create.author)
+      })
+      .map((create) => {
+        return {
+          uri: create.uri,
+          cid: create.cid,
+          indexedAt: new Date().toISOString(),
+        }
+      })
+    if (repostsToDelete.length > 0) {
+      try {
+        await this.db
+          .deleteFrom('repost')
+          .where('uri', 'in', repostsToDelete)
+          .execute()
+      } catch (e) {
+        console.log("delete failed for whatever reason", repostsToDelete)
+      }
+    }
+    if (repostsToCreate.length > 0) {
+      await this.db
+        .insertInto('repost')
+        .values(repostsToCreate)
+        .onConflict(oc => oc.doNothing())
+        .execute()
     }
 
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
