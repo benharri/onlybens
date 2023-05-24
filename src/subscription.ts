@@ -73,7 +73,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     const repostsToCreate = ops.reposts.creates
       .filter((create) => {
         // only ben posts
-        return bens.find((alice) => alice.did === create.author)
+        return bens.find((ben) => ben.did === create.author)
       })
       .map((create) => {
         return {
