@@ -14,6 +14,7 @@ export type Post = {
   indexedAt: string
   text: string | null
   author: string | null
+  feed: string | null
 }
 
 export type Repost = {

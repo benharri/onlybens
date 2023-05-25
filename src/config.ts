@@ -8,12 +8,15 @@ export type AppContext = {
 }
 
 export type Config = {
+  handle: string
+  appPassword: string
   port: number
-  listenhost: string
+  listenHost: string
   hostname: string
   sqliteLocation: string
   subscriptionEndpoint: string
   serviceDid: string
+  bskyServiceUrl: string
   publisherDid: string
   subscriptionReconnectDelay: number
 }

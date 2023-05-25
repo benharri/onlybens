@@ -80,7 +80,10 @@ migrations['005'] = {
       .execute()
   },
   async down(db: Kysely<unknown>) {
-    await db.schema.alterTable('post').dropColumn('text')
+    await db.schema
+      .alterTable('post')
+      .dropColumn('text')
+      .execute()
   },
 }
 
@@ -92,6 +95,24 @@ migrations['006'] = {
       .execute()
   },
   async down(db: Kysely<unknown>) {
-    await db.schema.alterTable('post').dropColumn('author')
+    await db.schema
+      .alterTable('post')
+      .dropColumn('author')
+      .execute()
   },
+}
+
+migrations['007'] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable('post')
+      .addColumn('feed', 'varchar')
+      .execute()
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable('post')
+      .dropColumn('feed')
+      .execute()
+  }
 }

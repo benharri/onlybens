@@ -23,11 +23,13 @@ export class FeedGenerator {
     app: express.Application,
     db: Database,
     firehose: FirehoseSubscription,
+    agent: AtpAgent,
     cfg: Config,
   ) {
     this.app = app
     this.db = db
     this.firehose = firehose
+    this.agent = agent
     this.cfg = cfg
   }
 
@@ -35,6 +37,7 @@ export class FeedGenerator {
     const app = express()
     const db = createDb(cfg.sqliteLocation)
     const firehose = new FirehoseSubscription(db, cfg.subscriptionEndpoint)
+    const agent = new AtpAgent({ service: cfg.bskyServiceUrl })
 
     const didCache = new MemoryCache()
     const didResolver = new DidResolver(
@@ -60,19 +63,20 @@ export class FeedGenerator {
     app.use(server.xrpc.router)
     app.use(wellKnown(ctx))
 
-    return new FeedGenerator(app, db, firehose, cfg)
+    return new FeedGenerator(app, db, firehose, agent, cfg)
   }
 
   async start(): Promise<http.Server> {
     await migrateToLatest(this.db)
-    this.agent = new AtpAgent({ service: 'https://bsky.social' })
+
     await this.agent.login({
-      identifier: process.env.FEEDGEN_HANDLE!,
-      password: process.env.FEEDGEN_APP_PASSWORD!,
+      identifier: this.cfg.handle,
+      password: this.cfg.appPassword,
     })
     console.log('logged in')
-    await this.firehose.run(this.agent, this.cfg.subscriptionReconnectDelay)
-    this.server = this.app.listen(this.cfg.port, this.cfg.listenhost)
+
+    this.firehose.run(this.agent, this.cfg.subscriptionReconnectDelay)
+    this.server = this.app.listen(this.cfg.port, this.cfg.listenHost)
     await events.once(this.server, 'listening')
     return this.server
   }

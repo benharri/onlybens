@@ -19,17 +19,16 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
     if (!indexedAt || !cid) {
       throw new InvalidRequestError('malformed cursor')
     }
+
     const timeStr = new Date(parseInt(indexedAt, 10)).toISOString()
     builder = builder
       .where('post.indexedAt', '<', timeStr)
       .orWhere((qb) => qb.where('post.indexedAt', '=', timeStr))
       .where('post.cid', '<', cid)
   }
-  const res = await builder.execute()
 
-  const feed = res.map((row) => ({
-    post: row.uri,
-  }))
+  const res = await builder.execute()
+  const feed = res.map((row) => ({ post: row.uri }))
 
   let cursor: string | undefined
   const last = res.at(-1)

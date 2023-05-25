@@ -9,8 +9,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent, agent: AtpAgent) {
     if (!isCommit(evt)) return
     const ops = await getOpsByType(evt)
-    const bens = await this.db.selectFrom('ben').select('did').execute()
 
+    // handle post creates
     for (const post of ops.posts.creates) {
       const user = await this.db
         .selectFrom('user')
@@ -18,6 +18,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         .where('did', '=', post.author)
         .execute()
 
+      // user not seen before, cache their profile
       if (user.length === 0) {
         console.log(`fetching profile for ${post.author}`)
         const profile = await agent.api.app.bsky.actor.getProfile({ actor: post.author })
@@ -33,13 +34,17 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .execute()
       }
 
+      // re-fetch db record
       const profile = await this.db
         .selectFrom('user')
         .select(['displayName', 'handle'])
         .where('did', '=', post.author)
         .executeTakeFirst()
 
-      if (profile && (profile.displayName?.toLowerCase().includes('ben') || profile.handle.toLowerCase().includes('ben'))) {
+      const isBen = (profile) => profile.displayName?.toLowerCase().includes('ben') || profile.handle.toLowerCase().includes('ben')
+
+      // store ben posts
+      if (profile && isBen(profile)) {
         const ben = await this.db
           .selectFrom('ben')
           .select('did')
@@ -62,6 +67,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             replyRoot: post.record?.reply?.root.uri ?? null,
             indexedAt: new Date().toISOString(),
             text: post.record.text,
+            feed: 'bens',
             author: post.author,
           })
           .onConflict(oc => oc.doNothing())
@@ -69,7 +75,17 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       }
     }
 
-    const repostsToDelete = ops.reposts.deletes.map((del) => del.uri)
+    // handle deletes
+    const postsToDelete = ops.posts.deletes.map((del) => del.uri)
+    if (postsToDelete.length > 0) {
+      await this.db
+        .deleteFrom('post')
+        .where('uri', 'in', postsToDelete)
+        .execute()
+    }
+
+    // handle repost creates
+    const bens = await this.db.selectFrom('ben').select('did').execute()
     const repostsToCreate = ops.reposts.creates
       .filter((create) => {
         // only ben posts
@@ -82,16 +98,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           indexedAt: new Date().toISOString(),
         }
       })
-    if (repostsToDelete.length > 0) {
-      try {
-        await this.db
-          .deleteFrom('repost')
-          .where('uri', 'in', repostsToDelete)
-          .execute()
-      } catch (e) {
-        console.log("delete failed for whatever reason", repostsToDelete)
-      }
-    }
     if (repostsToCreate.length > 0) {
       await this.db
         .insertInto('repost')
@@ -100,12 +106,18 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         .execute()
     }
 
-    const postsToDelete = ops.posts.deletes.map((del) => del.uri)
-    if (postsToDelete.length > 0) {
-      await this.db
-        .deleteFrom('post')
-        .where('uri', 'in', postsToDelete)
-        .execute()
+    // handle reposts to delete
+    const repostsToDelete = ops.reposts.deletes.map((del) => del.uri)
+    if (repostsToDelete.length > 0) {
+      try {
+        await this.db
+          .deleteFrom('repost')
+          .where('uri', 'in', repostsToDelete)
+          .execute()
+      } catch (e) {
+        console.log('delete failed for whatever reason', repostsToDelete)
+      }
     }
+
   }
 }
