@@ -43,7 +43,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       // re-fetch db record
       const ben = await this.db
         .selectFrom('user')
-        .innerJoin('ben', 'ben.did', 'did')
+        .innerJoin('ben', 'ben.did', 'user.did')
         .select(['displayName', 'handle'])
         .where('ben.did', '=', post.author)
         .executeTakeFirst()
