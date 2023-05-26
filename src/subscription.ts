@@ -32,32 +32,25 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             indexedAt: new Date().toISOString(),
           })
           .execute()
+
+        if (profile.data.handle.toLowerCase().includes('ben') || profile.data.displayName?.toLowerCase().includes('ben')) {
+          await this.db.insertInto('ben').values({ did: post.author })
+          console.log('new ben collected!!')
+          console.log(`${post.author} is ${profile.data.handle} with display name ${profile.data.displayName}`)
+        }
       }
 
       // re-fetch db record
-      const profile = await this.db
+      const ben = await this.db
         .selectFrom('user')
+        .innerJoin('ben', 'ben.did', 'did')
         .select(['displayName', 'handle'])
-        .where('did', '=', post.author)
+        .where('ben.did', '=', post.author)
         .executeTakeFirst()
 
-      const isBen = (profile) => profile.displayName?.toLowerCase().includes('ben') || profile.handle.toLowerCase().includes('ben')
-
       // store ben posts
-      if (profile && isBen(profile)) {
-        const ben = await this.db
-          .selectFrom('ben')
-          .select('did')
-          .where('did', '=', post.author)
-          .execute()
-
-        if (ben.length === 0) {
-          await this.db.insertInto('ben').values({ did: post.author }).execute()
-          console.log('new ben collected!!')
-          console.log(`${post.author} is ${profile.handle} with display name ${profile.displayName}`)
-        }
-
-        console.log(profile.handle, post.record.text)
+      if (ben) {
+        console.log(ben.displayName, '@', ben.handle, post.record.text)
         await this.db
           .insertInto('post')
           .values({
