@@ -14,12 +14,12 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     for (const post of ops.posts.creates) {
       const user = await this.db
         .selectFrom('user')
-        .select('did')
+        .select(['did', 'displayName', 'handle'])
         .where('did', '=', post.author)
-        .execute()
+        .executeTakeFirst()
 
       // user not seen before, cache their profile
-      if (user.length === 0) {
+      if (!user) {
         const profile = await agent.api.app.bsky.actor.getProfile({ actor: post.author })
         console.log(`fetched profile for ${post.author}: @${profile.data.handle} ${profile.data.displayName}`)
         await this.db
@@ -34,6 +34,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .execute()
 
         if (profile.data.handle.toLowerCase().includes('ben') || profile.data.displayName?.toLowerCase().includes('ben')) {
+          await this.db.insertInto('ben').values({ did: post.author }).execute()
+          console.log('new ben collected!!')
+          console.log(`${post.author} is ${profile.data.handle} with display name ${profile.data.displayName}`)
+        }
+      } else if (user.displayName === user.handle) {
+        // i was saving handle as displayName... :(
+        const profile = await agent.api.app.bsky.actor.getProfile({ actor: post.author })
+        console.log(`refetched invalid profile for @${user.handle}. updating displayName to '${profile.data.displayName}'`)
+        await this.db
+          .updateTable('user')
+          .set({ displayName: profile.data.displayName })
+          .where('did', '=', post.author)
+          .execute()
+
+        if (profile.data.displayName?.toLowerCase().includes('ben')) {
           await this.db.insertInto('ben').values({ did: post.author }).execute()
           console.log('new ben collected!!')
           console.log(`${post.author} is ${profile.data.handle} with display name ${profile.data.displayName}`)
