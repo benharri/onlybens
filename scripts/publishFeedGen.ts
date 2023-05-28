@@ -8,11 +8,11 @@ const run = async () => {
 
   // YOUR bluesky handle
   // Ex: user.bsky.social
-  const handle = process.env.FEEDGEN_HANDLE
+  const handle = process.env.FEEDGEN_HANDLE!
 
   // YOUR bluesky password, or preferably an App Password (found in your client settings)
   // Ex: abcd-1234-efgh-5678
-  const password = process.env.FEEDGEN_APP_PASSWORD
+  const password = process.env.FEEDGEN_APP_PASSWORD!
 
   // A short name for the record that will show in urls
   // Lowercase with no spaces.
@@ -35,9 +35,12 @@ const run = async () => {
   // NO NEED TO TOUCH ANYTHING BELOW HERE
   // -------------------------------------
 
-  if (!process.env.FEEDGEN_SERVICE_DID && !process.env.FEEDGEN_HOSTNAME) {
+  if (!process.env.FEEDGEN_SERVICE_DID && !process.env.FEEDGEN_HOSTNAME)
     throw new Error('Please provide a hostname in the .env file')
-  }
+
+  if (!handle || !password)
+    throw new Error('Please set credentials in .env')
+
   const feedGenDid =
     process.env.FEEDGEN_SERVICE_DID ?? `did:web:${process.env.FEEDGEN_HOSTNAME}`
 
