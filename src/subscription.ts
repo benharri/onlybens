@@ -27,7 +27,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .values({
             did: post.author,
             handle: profile.data.handle,
-            displayName: profile.data.handle,
+            displayName: profile.data.displayName,
             bio: profile.data.description,
             indexedAt: new Date().toISOString(),
           })
