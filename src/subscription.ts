@@ -20,8 +20,8 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
       // user not seen before, cache their profile
       if (user.length === 0) {
-        console.log(`fetching profile for ${post.author}`)
         const profile = await agent.api.app.bsky.actor.getProfile({ actor: post.author })
+        console.log(`fetched profile for ${post.author}: @${profile.data.handle} ${profile.data.displayName}`)
         await this.db
           .insertInto('user')
           .values({
