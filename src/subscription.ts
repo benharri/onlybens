@@ -34,7 +34,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .execute()
 
         if (profile.data.handle.toLowerCase().includes('ben') || profile.data.displayName?.toLowerCase().includes('ben')) {
-          await this.db.insertInto('ben').values({ did: post.author })
+          await this.db.insertInto('ben').values({ did: post.author }).execute()
           console.log('new ben collected!!')
           console.log(`${post.author} is ${profile.data.handle} with display name ${profile.data.displayName}`)
         }
