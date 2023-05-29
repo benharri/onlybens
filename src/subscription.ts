@@ -41,10 +41,13 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
       } else if (user.displayName === user.handle) {
         // i was saving handle as displayName... :(
         const profile = await agent.api.app.bsky.actor.getProfile({ actor: post.author })
-        console.log(`refetched invalid profile for @${user.handle}. updating displayName to '${profile.data.displayName}'`)
+        console.log(`refetched invalid profile for ${post.author}: oldHandle=@${user.handle} newHandle=@${profile.data.handle} displayName='${profile.data.displayName}'`)
         await this.db
           .updateTable('user')
-          .set({ displayName: profile.data.displayName })
+          .set({
+            displayName: profile.data.displayName ?? null,
+            handle: profile.data.handle,
+          })
           .where('did', '=', post.author)
           .execute()
 
@@ -54,14 +57,14 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
             .select('did')
             .where('did', '=', post.author)
             .executeTakeFirst()
-          
+
           if (!existingBen) {
             await this.db
               .insertInto('ben')
               .values({ did: post.author })
               .onConflict(oc => oc.doNothing())
               .execute()
-            console.log('new ben collected!!')
+            console.log('ben collected from new display name!!!')
             console.log(`${post.author} is ${profile.data.handle} with display name '${profile.data.displayName}'`)
           }
         }
