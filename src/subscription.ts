@@ -36,7 +36,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         if (profile.data.handle.toLowerCase().includes('ben') || profile.data.displayName?.toLowerCase().includes('ben')) {
           await this.db.insertInto('ben').values({ did: post.author }).execute()
           console.log('new ben collected!!')
-          console.log(`${post.author} is ${profile.data.handle} with display name ${profile.data.displayName}`)
+          console.log(`${post.author} is ${profile.data.handle} with display name '${profile.data.displayName}'`)
         }
       } else if (user.displayName === user.handle) {
         // i was saving handle as displayName... :(
@@ -49,9 +49,13 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .execute()
 
         if (profile.data.displayName?.toLowerCase().includes('ben')) {
-          await this.db.insertInto('ben').values({ did: post.author }).execute()
+          await this.db
+            .insertInto('ben')
+            .values({ did: post.author })
+            .onConflict(oc => oc.doNothing())
+            .execute()
           console.log('new ben collected!!')
-          console.log(`${post.author} is ${profile.data.handle} with display name ${profile.data.displayName}`)
+          console.log(`${post.author} is ${profile.data.handle} with display name '${profile.data.displayName}'`)
         }
       }
 
