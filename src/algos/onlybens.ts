@@ -10,12 +10,13 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
     .selectFrom('post')
     .select(['uri', 'cid', 'indexedAt'])
     .unionAll(ctx.db.selectFrom('repost').select(['uri', 'cid', 'indexedAt']))
+    .where('feed', '=', 'bens')
     .orderBy('indexedAt', 'desc')
     .orderBy('cid', 'desc')
     .limit(params.limit)
 
   if (params.cursor) {
-    const [indexedAt, cid] = params.cursor.split('::')
+    const [indexedAt, cid] = params.cursor.split('::', 2)
     if (!indexedAt || !cid) {
       throw new InvalidRequestError('malformed cursor')
     }
@@ -36,8 +37,5 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
     cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
   }
 
-  return {
-    cursor,
-    feed,
-  }
+  return { cursor, feed }
 }
