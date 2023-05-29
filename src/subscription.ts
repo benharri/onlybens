@@ -49,13 +49,21 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
           .execute()
 
         if (profile.data.displayName?.toLowerCase().includes('ben')) {
-          await this.db
-            .insertInto('ben')
-            .values({ did: post.author })
-            .onConflict(oc => oc.doNothing())
-            .execute()
-          console.log('new ben collected!!')
-          console.log(`${post.author} is ${profile.data.handle} with display name '${profile.data.displayName}'`)
+          const existingBen = await this.db
+            .selectFrom('ben')
+            .select('did')
+            .where('did', '=', post.author)
+            .executeTakeFirst()
+          
+          if (!existingBen) {
+            await this.db
+              .insertInto('ben')
+              .values({ did: post.author })
+              .onConflict(oc => oc.doNothing())
+              .execute()
+            console.log('new ben collected!!')
+            console.log(`${post.author} is ${profile.data.handle} with display name '${profile.data.displayName}'`)
+          }
         }
       }
 
@@ -69,7 +77,7 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
       // store ben posts
       if (ben) {
-        console.log(ben.displayName, '@', ben.handle, post.record.text)
+        console.log(`new benpost '${ben.displayName}' @${ben.handle}: '${post.record.text}'`)
         await this.db
           .insertInto('post')
           .values({
