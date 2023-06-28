@@ -57,6 +57,7 @@ export class FeedGenerator {
       db,
       didResolver,
       cfg,
+      agent,
     }
     feedGeneration(server, ctx)
     describeGenerator(server, ctx)

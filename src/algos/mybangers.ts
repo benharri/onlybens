@@ -6,35 +6,24 @@ import { AppContext } from '../config'
 export const shortname = 'mybangers'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
-  let builder = ctx.db
-    .selectFrom('post')
-    .select(['uri', 'cid', 'indexedAt'])
-    .where('author', '=', params.feed)
-    .orderBy('indexedAt', 'desc')
-    .orderBy('likeCount', 'desc')
-    .limit(params.limit)
+  let response = await ctx.agent.api.app.bsky.feed.getAuthorFeed({
+    actor: params.feed,
+    cursor: params.cursor,
+    limit: params.limit,
+  })
+  if (!response) throw new InvalidRequestError('failed to get feed')
 
-  if (params.cursor) {
-    const [indexedAt, cid] = params.cursor.split('::', 2)
-    if (!indexedAt || !cid) {
-      throw new InvalidRequestError('malformed cursor')
-    }
-
-    const timeStr = new Date(parseInt(indexedAt, 10)).toISOString()
-    builder = builder
-      .where('post.indexedAt', '<', timeStr)
-      .orWhere((qb) => qb.where('post.indexedAt', '=', timeStr))
-      .where('post.cid', '<', cid)
-  }
-
-  const res = await builder.execute()
-  const feed = res.map((row) => ({ post: row.uri }))
-
-  let cursor: string | undefined
-  const last = res.at(-1)
-  if (last) {
-    cursor = `${new Date(last.indexedAt).getTime()}::${last.cid}`
-  }
-
+  let bangers = response.data.feed
+  bangers.sort((a, b) => {
+    if (!a.post.likeCount) return 1;
+    if (!b.post.likeCount) return -1;
+    if (a.post.likeCount < b.post.likeCount) return 1
+    if (a.post.likeCount > b.post.likeCount) return -1
+    return 0
+  })
+  console.log(bangers)
+  const feed = bangers.map(b => ({ post: b.post.uri }))
+  const cursor = response.data.cursor
   return { cursor, feed }
 }
+

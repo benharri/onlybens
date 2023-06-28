@@ -1,7 +1,4 @@
-import {
-  OutputSchema as RepoEvent,
-  isCommit,
-} from './lexicon/types/com/atproto/sync/subscribeRepos'
+import { isCommit, OutputSchema as RepoEvent } from './lexicon/types/com/atproto/sync/subscribeRepos'
 import { FirehoseSubscriptionBase, getOpsByType } from './util/subscription'
 import { AtpAgent } from '@atproto/api'
 
@@ -9,36 +6,6 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
   async handleEvent(evt: RepoEvent, agent: AtpAgent) {
     if (!isCommit(evt)) return
     const ops = await getOpsByType(evt)
-
-    for (const like of ops.likes.creates) {
-      const post = await this.db
-        .selectFrom('post')
-        .select(['likeCount'])
-        .where('uri', '=', like.uri)
-        .executeTakeFirst()
-
-      if (post) {
-        await this.db
-          .updateTable('post')
-          .set({likeCount: post.likeCount + 1})
-          .execute()
-      }
-    }
-
-    for (const unlike of ops.likes.deletes) {
-      const post = await this.db
-        .selectFrom('post')
-        .select(['likeCount'])
-        .where('uri', '=', unlike.uri)
-        .executeTakeFirst()
-
-      if (post) {
-        await this.db
-          .updateTable('post')
-          .set({likeCount: post.likeCount - 1})
-          .execute()
-      }
-    }
 
     // handle post creates
     for (const post of ops.posts.creates) {

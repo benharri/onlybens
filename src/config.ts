@@ -1,10 +1,12 @@
 import { Database } from './db'
 import { DidResolver } from '@atproto/did-resolver'
+import { AtpAgent } from '@atproto/api'
 
 export type AppContext = {
   db: Database
   didResolver: DidResolver
   cfg: Config
+  agent: AtpAgent
 }
 
 export type Config = {
