@@ -10,6 +10,36 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     if (!isCommit(evt)) return
     const ops = await getOpsByType(evt)
 
+    for (const like of ops.likes.creates) {
+      const post = await this.db
+        .selectFrom('post')
+        .select(['likeCount'])
+        .where('uri', '=', like.uri)
+        .executeTakeFirst()
+
+      if (post) {
+        await this.db
+          .updateTable('post')
+          .set({likeCount: post.likeCount + 1})
+          .execute()
+      }
+    }
+
+    for (const unlike of ops.likes.deletes) {
+      const post = await this.db
+        .selectFrom('post')
+        .select(['likeCount'])
+        .where('uri', '=', unlike.uri)
+        .executeTakeFirst()
+
+      if (post) {
+        await this.db
+          .updateTable('post')
+          .set({likeCount: post.likeCount - 1})
+          .execute()
+      }
+    }
+
     // handle post creates
     for (const post of ops.posts.creates) {
       const user = await this.db
@@ -78,24 +108,28 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         .where('ben.did', '=', post.author)
         .executeTakeFirst()
 
-      // store ben posts
+      // store ben posts with correct feed
+      let feed = ''
       if (ben) {
         console.log(`new benpost '${ben.displayName}' @${ben.handle}: '${post.record.text}'`)
-        await this.db
-          .insertInto('post')
-          .values({
-            uri: post.uri,
-            cid: post.cid,
-            replyParent: post.record?.reply?.parent.uri ?? null,
-            replyRoot: post.record?.reply?.root.uri ?? null,
-            indexedAt: new Date().toISOString(),
-            text: post.record.text,
-            feed: 'bens',
-            author: post.author,
-          })
-          .onConflict(oc => oc.doNothing())
-          .execute()
+        feed = 'bens'
       }
+
+      await this.db
+        .insertInto('post')
+        .values({
+          uri: post.uri,
+          cid: post.cid,
+          replyParent: post.record?.reply?.parent.uri ?? null,
+          replyRoot: post.record?.reply?.root.uri ?? null,
+          indexedAt: new Date().toISOString(),
+          text: post.record.text,
+          feed: feed,
+          author: post.author,
+          likeCount: 0,
+        })
+        .onConflict(oc => oc.doNothing())
+        .execute()
     }
 
     // handle deletes

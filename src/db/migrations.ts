@@ -116,3 +116,18 @@ migrations['007'] = {
       .execute()
   }
 }
+
+migrations['008'] = {
+  async up(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable('post')
+      .addColumn('likeCount', 'numeric')
+      .execute()
+  },
+  async down(db: Kysely<unknown>) {
+    await db.schema
+      .alterTable('post')
+      .dropColumn('likeCount')
+      .execute()
+  }
+}

@@ -15,6 +15,7 @@ export type Post = {
   text: string | null
   author: string | null
   feed: string | null
+  likeCount: number
 }
 
 export type Repost = {
