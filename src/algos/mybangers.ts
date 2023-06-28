@@ -6,24 +6,26 @@ import { AppContext } from '../config'
 export const shortname = 'mybangers'
 
 export const handler = async (ctx: AppContext, params: QueryParams) => {
-  let response = await ctx.agent.api.app.bsky.feed.getAuthorFeed({
-    actor: params.feed,
+  console.log('looking up posts for ', params.feed)
+  let records = await ctx.agent.com.atproto.repo.listRecords({
+    repo: params.feed,
     cursor: params.cursor,
     limit: params.limit,
+    collection: '',
   })
-  if (!response) throw new InvalidRequestError('failed to get feed')
+  let posts = await ctx.agent.api.app.bsky.feed.getPosts({ uris: records.data.records.map(r => r.uri) })
+  if (!posts) throw new InvalidRequestError('failed to get feed')
 
-  let bangers = response.data.feed
+  let bangers = posts.data.posts
   bangers.sort((a, b) => {
-    if (!a.post.likeCount) return 1;
-    if (!b.post.likeCount) return -1;
-    if (a.post.likeCount < b.post.likeCount) return 1
-    if (a.post.likeCount > b.post.likeCount) return -1
+    if (!a.likeCount) return 1
+    if (!b.likeCount) return -1
+    if (a.likeCount < b.likeCount) return 1
+    if (a.likeCount > b.likeCount) return -1
     return 0
   })
   console.log(bangers)
-  const feed = bangers.map(b => ({ post: b.post.uri }))
-  const cursor = response.data.cursor
+  const feed = bangers.map(b => ({ post: b.uri }))
+  const cursor = records.data.cursor
   return { cursor, feed }
 }
-
