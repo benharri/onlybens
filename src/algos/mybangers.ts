@@ -11,7 +11,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
     .select(['uri', 'cid', 'indexedAt'])
     .where('author', '=', params.feed)
     .orderBy('indexedAt', 'desc')
-    .orderBy('cid', 'desc')
+    .orderBy('likeCount', 'desc')
     .limit(params.limit)
 
   if (params.cursor) {
