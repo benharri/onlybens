@@ -21,11 +21,15 @@ export default function(server: Server, ctx: AppContext) {
     }
 
     // pass requester's did as the feed name
-    params.feed = await validateAuth(
+    let requester = await validateAuth(
       req,
       ctx.cfg.serviceDid,
       ctx.didResolver,
     )
+    let f = await ctx.didResolver.resolveDid(requester)
+    console.log(requester)
+    console.log(f)
+    params.feed = f?.id ?? ''
 
     const body = await algo(ctx, params)
     return {
