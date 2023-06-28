@@ -11,7 +11,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
     repo: params.feed,
     cursor: params.cursor,
     limit: params.limit,
-    collection: '',
+    collection: 'app.bsky.feed.post',
   })
   let posts = await ctx.agent.api.app.bsky.feed.getPosts({ uris: records.data.records.map(r => r.uri) })
   if (!posts) throw new InvalidRequestError('failed to get feed')
