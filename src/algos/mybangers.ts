@@ -24,7 +24,7 @@ export const handler = async (ctx: AppContext, params: QueryParams) => {
     if (a.likeCount > b.likeCount) return -1
     return 0
   })
-  console.log(bangers)
+  console.log('sorted skeets', bangers)
   const feed = bangers.map(b => ({ post: b.uri }))
   const cursor = records.data.cursor
   return { cursor, feed }
